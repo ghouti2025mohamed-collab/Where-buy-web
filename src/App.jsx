@@ -47,6 +47,13 @@ function MediaPreview({ url, type, className = "" }) {
 
 export default function App() {
   const [session, setSession] = useState(null);
+  const [productOpen, setProductOpen] = useState(false);
+const [productName, setProductName] = useState("");
+const [productDescription, setProductDescription] = useState("");
+const [productPrice, setProductPrice] = useState("");
+const [productStock, setProductStock] = useState("1");
+const [productImage, setProductImage] = useState(null);
+const [productPublishing, setProductPublishing] = useState(false);
   const [profile, setProfile] = useState(null);
   const [activePage, setActivePage] = useState("home");
   const [products, setProducts] = useState(DEMO_PRODUCTS);
@@ -98,6 +105,13 @@ export default function App() {
   const postFileRef = useRef(null);
   const storyFileRef = useRef(null);
   const chatFileRef = useRef(null);
+  const [productOpen, setProductOpen] = useState(false);
+const [productName, setProductName] = useState("");
+const [productDescription, setProductDescription] = useState("");
+const [productPrice, setProductPrice] = useState("");
+const [productStock, setProductStock] = useState("1");
+const [productImage, setProductImage] = useState(null);
+const [productPublishing, setProductPublishing] = useState(false);
 
   useEffect(() => { callStateRef.current = callState; }, [callState]);
 
@@ -321,6 +335,49 @@ async function signInOrUp(event) {
     const { data } = supabase.storage.from("social-media").getPublicUrl(path);
     return data.publicUrl;
   }
+  async function getOrCreateMyCompany() {
+  if (!session?.user?.id) {
+    throw new Error("يجب تسجيل الدخول أولاً.");
+  }
+
+  const userId = session.user.id;
+
+  const { data: existingCompany, error: findError } = await supabase
+    .from("companies")
+    .select("id, name, owner_id")
+    .eq("owner_id", userId)
+    .limit(1)
+    .maybeSingle();
+
+  if (findError) throw findError;
+
+  if (existingCompany) return existingCompany;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", userId)
+    .maybeSingle();
+
+  const companyName =
+    profile?.full_name ||
+    session.user.email?.split("@")[0] ||
+    "بائع Where Buy";
+
+  const { data: newCompany, error: createError } = await supabase
+    .from("companies")
+    .insert({
+      owner_id: userId,
+      name: companyName,
+      business_type: "individual"
+    })
+    .select("id, name, owner_id")
+    .single();
+
+  if (createError) throw createError;
+
+  return newCompany;
+}
 
   async function publishPost(event) {
     event.preventDefault();
@@ -337,6 +394,64 @@ async function signInOrUp(event) {
     } catch (error) { flash(`تعذر النشر: ${error.message || "خطأ غير معروف"}`); }
     finally { setPublishBusy(false); }
   }
+  async function publishProduct({
+  name,
+  description,
+  price,
+  stock,
+  image,
+}) {
+  try {
+    if (!session?.user?.id) {
+      throw new Error("يجب تسجيل الدخول أولاً.");
+    }
+
+    if (!name?.trim()) {
+      throw new Error("أدخل اسم المنتج.");
+    }
+
+    const numericPrice = Number(price);
+    const numericStock = Number(stock);
+
+    if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
+      throw new Error("أدخل سعرًا صحيحًا.");
+    }
+
+    if (!Number.isInteger(numericStock) || numericStock < 0) {
+      throw new Error("أدخل كمية مخزون صحيحة.");
+    }
+
+    const company = await getOrCreateMyCompany();
+
+    let imageUrl = null;
+
+    if (image) {
+      imageUrl = await uploadPublicMedia(image, "products");
+    }
+
+    const { data, error } = await supabase
+      .from("products")
+      .insert({
+        company_id: company.id,
+        name: name.trim(),
+        description: description?.trim() || null,
+        price: numericPrice,
+        stock: numericStock,
+        image_url: imageUrl,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await loadCatalog();
+
+    return data;
+  } catch (error) {
+    console.error("publishProduct:", error);
+    throw error;
+  }
+}
 
   async function publishStory(event) {
     event.preventDefault();
