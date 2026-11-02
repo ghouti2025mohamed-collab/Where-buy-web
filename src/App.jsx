@@ -219,9 +219,6 @@ export default function App() {
     const text = `${product.name || ""} ${product.description || ""} ${product.store || ""}`.toLowerCase();
     return matchesCategory && text.includes(query.trim().toLowerCase());
   }), [products, category, query]);
-
-  async function signInOrUp(event) {
-    
 async function signInOrUp(event) {
   event.preventDefault();
 
