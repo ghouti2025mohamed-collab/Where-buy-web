@@ -221,31 +221,95 @@ export default function App() {
   }), [products, category, query]);
 
   async function signInOrUp(event) {
-    event.preventDefault();
-    if (!supabase) { flash("أضف إعدادات Supabase أولًا لتفعيل الحسابات والرسائل والحفظ."); return; }
-    setAuthBusy(true);
-    try {
-      if (authMode === "signup") {
-        const { data, error } = await supabase.auth.signUp({
-          email: authForm.email.trim(), password: authForm.password,
-          options: { data: { full_name: authForm.full_name.trim(), phone: authForm.phone.trim(), public_phone: authForm.show_phone ? authForm.phone.trim() : null, role: authForm.role } },
-        });
-        if (error) throw error;
-        if (data.user && data.session) {
-          const { error: profileError } = await supabase.from("profiles").upsert({ id: data.user.id, full_name: authForm.full_name.trim(), phone: authForm.phone.trim(), role: authForm.role }, { onConflict: "id" });
-          if (profileError) throw profileError;
-          const { error: publicError } = await supabase.from("public_profiles").upsert({ id: data.user.id, full_name: authForm.full_name.trim(), phone: authForm.show_phone ? authForm.phone.trim() : null, role: authForm.role }, { onConflict: "id" });
-          if (publicError) throw publicError;
-          setAuthOpen(false); flash("تم إنشاء حسابك بنجاح.");
-        } else flash("أرسلنا رابط تأكيد إلى بريدك الإلكتروني. أكّد الحساب ثم سجّل الدخول.");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email: authForm.email.trim(), password: authForm.password });
-        if (error) throw error;
-        setAuthOpen(false); flash("مرحبًا بك في Where Buy.");
-      }
-    } catch (error) { flash(error.message || "تعذر إتمام العملية."); }
-    finally { setAuthBusy(false); }
+    
+async function signInOrUp(event) {
+  event.preventDefault();
+
+  if (!supabase) {
+    flash("إعدادات Supabase غير مكتملة.");
+    return;
   }
+
+  setAuthBusy(true);
+
+  try {
+    if (authMode === "signup") {
+      const { data, error } = await supabase.auth.signUp({
+        email: authForm.email.trim(),
+        password: authForm.password,
+        options: {
+          data: {
+            full_name: authForm.full_name.trim(),
+            phone: authForm.phone.trim(),
+            public_phone: authForm.show_phone
+              ? authForm.phone.trim()
+              : null,
+            role: authForm.role,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.user && data.session) {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .upsert({
+            id: data.user.id,
+            full_name: authForm.full_name.trim(),
+            phone: authForm.phone.trim(),
+            role: authForm.role,
+          }, { onConflict: "id" });
+
+        if (profileError) throw profileError;
+
+        const { error: publicError } = await supabase
+          .from("public_profiles")
+          .upsert({
+            id: data.user.id,
+            full_name: authForm.full_name.trim(),
+            phone: authForm.show_phone
+              ? authForm.phone.trim()
+              : null,
+            role: authForm.role,
+          }, { onConflict: "id" });
+
+        if (publicError) throw publicError;
+
+        setSession(data.session);
+        setAuthOpen(false);
+        await loadMyProfile(data.user);
+        flash("تم إنشاء حسابك بنجاح.");
+      } else {
+        flash("أرسلنا رابط تأكيد إلى بريدك الإلكتروني. أكّد الحساب ثم سجّل الدخول.");
+      }
+    } else {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: authForm.email.trim(),
+        password: authForm.password,
+      });
+
+      if (error) throw error;
+
+      if (!data.session || !data.user) {
+        throw new Error("لم يتم إنشاء جلسة تسجيل الدخول.");
+      }
+
+      setSession(data.session);
+      setAuthOpen(false);
+      setActivePage("home");
+
+      await loadMyProfile(data.user);
+
+      flash("مرحبًا بك في Where Buy.");
+    }
+  } catch (error) {
+    flash(error.message || "تعذر إتمام العملية.");
+  } finally {
+    setAuthBusy(false);
+  }
+}
+
 
   async function signOut() {
     if (supabase) await supabase.auth.signOut();
