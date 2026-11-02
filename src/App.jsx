@@ -112,7 +112,8 @@ const [productPublishing, setProductPublishing] = useState(false);
   const postFileRef = useRef(null);
   const storyFileRef = useRef(null);
   const chatFileRef = useRef(null);
-  const [productOpen, setProductOpen] = useState(false);
+  const [addProductOpen, setAddProductOpen] = useState(false);
+const [productOpen, setProductOpen] = useState(null);
 const [productName, setProductName] = useState("");
 const [productDescription, setProductDescription] = useState("");
 const [productPrice, setProductPrice] = useState("");
@@ -758,7 +759,7 @@ async function signInOrUp(event) {
 
   <button
     className="publish-main"
-    onClick={() => session?.user ? setProductOpen(true) : setAuthOpen(true)}
+    onClick={() => session?.user ? setAddProductOpen(true) : setAuthOpen(true)}
   >
     <Plus size={18} /> إضافة منتج
   </button>
@@ -807,6 +808,96 @@ async function signInOrUp(event) {
           </section>}
 
           {activePage === "favorites" && <section className="products-section"><div className="section-heading"><div><span className="eyebrow">قائمتك الخاصة</span><h1>المنتجات المفضلة</h1><p>المنتجات التي حفظتها للعودة إليها لاحقًا.</p></div></div>{!session?.user ? <EmptyState title="سجّل الدخول لحفظ المفضلة" body="أنشئ حسابًا حتى تبقى منتجاتك المفضلة محفوظة." action="تسجيل الدخول" onAction={() => setAuthOpen(true)} /> : <div className="product-grid">{products.filter((p) => favorites.includes(String(p.id))).map((product) => <ProductCard key={product.id} product={product} isFavorite onFavorite={() => toggleFavorite(product.id)} onPress={() => setProductOpen(product)} />)}</div>}</section>}
+        {addProductOpen && (
+  <div className="modal-overlay">
+    <form
+      className="modal-card"
+      onSubmit={async (event) => {
+        event.preventDefault();
+        setProductPublishing(true);
+
+        try {
+          await publishProduct({
+            name: productName,
+            description: productDescription,
+            price: productPrice,
+            stock: productStock,
+            image: productImage,
+          });
+
+          setProductName("");
+          setProductDescription("");
+          setProductPrice("");
+          setProductStock("1");
+          setProductImage(null);
+          setAddProductOpen(false);
+          alert("تم نشر المنتج بنجاح.");
+        } catch (error) {
+          alert(error.message || "تعذر نشر المنتج.");
+        } finally {
+          setProductPublishing(false);
+        }
+      }}
+    >
+      <h2>إضافة منتج جديد</h2>
+
+      <input
+        required
+        value={productName}
+        onChange={(e) => setProductName(e.target.value)}
+        placeholder="اسم المنتج"
+      />
+
+      <textarea
+        value={productDescription}
+        onChange={(e) => setProductDescription(e.target.value)}
+        placeholder="وصف المنتج"
+      />
+
+      <input
+        required
+        type="number"
+        min="0.01"
+        step="0.01"
+        value={productPrice}
+        onChange={(e) => setProductPrice(e.target.value)}
+        placeholder="السعر بالدينار الجزائري"
+      />
+
+      <input
+        required
+        type="number"
+        min="0"
+        step="1"
+        value={productStock}
+        onChange={(e) => setProductStock(e.target.value)}
+        placeholder="الكمية المتوفرة"
+      />
+
+      <label>
+        صورة المنتج
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) =>
+            setProductImage(e.target.files?.[0] || null)
+          }
+        />
+      </label>
+
+      <button type="submit" disabled={productPublishing}>
+        {productPublishing ? "جارٍ النشر..." : "نشر المنتج"}
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setAddProductOpen(false)}
+      >
+        إلغاء
+      </button>
+    </form>
+  </div>
+)}
         </main>
 
         <aside className="right-rail">
