@@ -747,8 +747,22 @@ async function signInOrUp(event) {
         </aside>
 
         <main className="main-content">
-          {activePage === "home" && <>
-            <section className="welcome-row"><div><span className="eyebrow">سوقك في مكان واحد</span><h1>اكتشف ما تبحث عنه <span>بسهولة.</span></h1><p>منتجات قريبة منك، متاجر موثوقة، وتواصل مباشر مع البائع.</p></div><button className="publish-main" onClick={() => session?.user ? setPublishOpen(true) : setAuthOpen(true)}><Plus size={18} /> إنشاء منشور</button></section>
+          {activePage === "home" &&
+            <section className="welcome-row"><div><span className="eyebrow">سوقك في مكان واحد</span><h1>اكتشف ما تبحث عنه <span>بسهولة.</span></h1><p>منتجات قريبة منك، متاجر موثوقة، وتواصل مباشر مع البائع.</p></div><div className="flex flex-wrap gap-2">
+  <button
+    className="publish-main"
+    onClick={() => session?.user ? setPublishOpen(true) : setAuthOpen(true)}
+  >
+    <Plus size={18} /> إنشاء منشور
+  </button>
+
+  <button
+    className="publish-main"
+    onClick={() => session?.user ? setProductOpen(true) : setAuthOpen(true)}
+  >
+    <Plus size={18} /> إضافة منتج
+  </button>
+</div></section>
             <section className="stories-section">
               <div className="section-heading"><div><h2>القصص اليومية</h2><p>شاهد آخر ما نشرته المتاجر والمستخدمون</p></div><span className="live-label"><i /> نشطة الآن</span></div>
               <div className="stories-strip">
